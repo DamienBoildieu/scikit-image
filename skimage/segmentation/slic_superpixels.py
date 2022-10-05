@@ -1,4 +1,3 @@
-import math
 from collections.abc import Iterable
 from warnings import warn
 
@@ -95,11 +94,9 @@ def _get_grid_centroids(image, n_centroids):
 
     grid_z, grid_y, grid_x = np.mgrid[:d, :h, :w]
     slices = regular_grid(image.shape[:3], n_centroids)
-
     centroids_z = grid_z[slices].ravel()[..., np.newaxis]
     centroids_y = grid_y[slices].ravel()[..., np.newaxis]
     centroids_x = grid_x[slices].ravel()[..., np.newaxis]
-
     centroids = np.concatenate([centroids_z, centroids_y, centroids_x],
                                axis=-1)
 
@@ -115,7 +112,7 @@ def _get_grid_centroids(image, n_centroids):
 def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
          spacing=None, multichannel=True, convert2lab=None,
          enforce_connectivity=True, min_size_factor=0.5, max_size_factor=3,
-         slic_zero=False, start_label=1, mask=None, *,
+         slic_zero=False, start_label=1, mask=None, color_distance='euclidean', *,
          channel_axis=-1):
     """Segments image using k-means clustering in Color-(x,y,z) space.
 
@@ -183,6 +180,9 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
 
         .. versionadded:: 0.17
            ``mask`` was introduced in 0.17
+    color_distance: str, optional
+        Distance function for color features. If euclidean, uses euclidean distance,
+        if sad, computes the spectral angle distance. Default is euclidean.
     channel_axis : int or None, optional
         If None, the image is assumed to be a grayscale (single channel) image.
         Otherwise, this parameter indicates which axis of the array corresponds
@@ -203,12 +203,6 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
         dimension is not of length 3.
     ValueError
         If ``start_label`` is not 0 or 1.
-    ValueError
-        If ``image`` contains unmasked NaN values.
-    ValueError
-        If ``image`` contains unmasked infinite values.
-    ValueError
-        If ``image`` is 2D but ``channel_axis`` is -1 (the default).
 
     Notes
     -----
@@ -220,8 +214,7 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
       and ``spacing=[5, 1, 1]``, the effective `sigma` is ``[0.2, 1, 1]``. This
       ensures sensible smoothing for anisotropic images.
 
-    * The image is rescaled to be in [0, 1] prior to processing (masked
-      values are ignored).
+    * The image is rescaled to be in [0, 1] prior to processing.
 
     * Images of shape (M, N, 3) are interpreted as 2D RGB images by default. To
       interpret them as 3D with the last dimension having length 3, use
@@ -254,12 +247,6 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
     >>> segments = slic(img, n_segments=100, compactness=20)
 
     """
-    if image.ndim == 2 and channel_axis is not None:
-        raise ValueError(
-            f"channel_axis={channel_axis} indicates multichannel, which is not "
-            "supported for a two-dimensional image; use channel_axis=None if "
-            "the image is grayscale"
-        )
 
     image = img_as_float(image)
     float_dtype = utils._supported_float_type(image.dtype)
@@ -267,29 +254,12 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
     # function input
     image = image.astype(float_dtype, copy=True)
 
-    if mask is not None:
-        # Create masked_image to rescale while ignoring masked values
-        mask = np.ascontiguousarray(mask, dtype=bool)
-        if channel_axis is not None:
-            mask_ = np.expand_dims(mask, axis=channel_axis)
-            mask_ = np.broadcast_to(mask_, image.shape)
-        else:
-            mask_ = mask
-        image_values = image[mask_]
-    else:
-        image_values = image
-
     # Rescale image to [0, 1] to make choice of compactness insensitive to
     # input image scale.
-    imin = image_values.min()
-    imax = image_values.max()
-    if np.isnan(imin):
-        raise ValueError("unmasked NaN values in image are not supported")
-    if np.isinf(imin) or np.isinf(imax):
-        raise ValueError("unmasked infinite values in image are not supported")
-    image -= imin
-    if imax != imin:
-        image /= (imax - imin)
+    image -= image.min()
+    imax = image.max()
+    if imax != 0:
+        image /= imax
 
     use_mask = mask is not None
     dtype = image.dtype
@@ -321,7 +291,7 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
     # initialize cluster centroids for desired number of segments
     update_centroids = False
     if use_mask:
-        mask = mask.view('uint8')
+        mask = np.ascontiguousarray(mask, dtype=bool).view('uint8')
         if mask.ndim == 2:
             mask = np.ascontiguousarray(mask[np.newaxis, ...])
         if mask.shape != image.shape[:3]:
@@ -330,7 +300,6 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
         update_centroids = True
     else:
         centroids, steps = _get_grid_centroids(image, n_segments)
-
     if spacing is None:
         spacing = np.ones(3, dtype=dtype)
     elif isinstance(spacing, Iterable):
@@ -379,8 +348,11 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
         image = gaussian(image, sigma, mode='reflect')
 
     n_centroids = centroids.shape[0]
+    centroids_features = np.zeros((n_centroids, image.shape[3]))
+    if color_distance == 'sad':
+        centroids_features = image[centroids[:,0], centroids[:,1], centroids[:,2]]
     segments = np.ascontiguousarray(np.concatenate(
-        [centroids, np.zeros((n_centroids, image.shape[3]))],
+        [centroids, centroids_features],
         axis=-1), dtype=dtype)
 
     # Scaling of ratio in the same way as in the SLIC paper so the
@@ -394,17 +366,16 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
         # Step 2 of the algorithm [3]_
         _slic_cython(image, mask, segments, step, max_num_iter, spacing,
                      slic_zero, ignore_color=True,
-                     start_label=start_label)
+                     start_label=start_label, color_distance=color_distance)
 
     labels = _slic_cython(image, mask, segments, step, max_num_iter,
                           spacing, slic_zero, ignore_color=False,
-                          start_label=start_label)
-
+                          start_label=start_label, color_distance=color_distance)
     if enforce_connectivity:
         if use_mask:
             segment_size = mask.sum() / n_centroids
         else:
-            segment_size = math.prod(image.shape[:3]) / n_centroids
+            segment_size = np.prod(image.shape[:3]) / n_centroids
         min_size = int(min_size_factor * segment_size)
         max_size = int(max_size_factor * segment_size)
         labels = _enforce_label_connectivity_cython(
@@ -412,5 +383,4 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
 
     if is_2d:
         labels = labels[0]
-
     return labels

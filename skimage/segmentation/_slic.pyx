@@ -3,7 +3,7 @@
 #cython: nonecheck=False
 #cython: wraparound=False
 from libc.float cimport DBL_MAX
-
+from libc.math cimport acos, sqrt
 import numpy as np
 cimport numpy as cnp
 
@@ -16,12 +16,13 @@ cnp.import_array()
 def _slic_cython(np_floats[:, :, :, ::1] image_zyx,
                  cnp.uint8_t[:, :, ::1] mask,
                  np_floats[:, ::1] segments,
-                 cnp.float32_t step,
+                 float step,
                  Py_ssize_t max_num_iter,
                  np_floats[::1] spacing,
                  bint slic_zero,
                  Py_ssize_t start_label=1,
-                 bint ignore_color=False):
+                 bint ignore_color=False,
+                 str color_distance='euclidean'):
     """Helper function for SLIC segmentation.
 
     Parameters
@@ -75,7 +76,6 @@ def _slic_cython(np_floats[:, :, :, ::1] image_zyx,
     performance and for readability.
 
     """
-
     if np_floats is cnp.float32_t:
         dtype = np.float32
     else:
@@ -120,6 +120,8 @@ def _slic_cython(np_floats[:, :, :, ::1] image_zyx,
     # max_color_sq can be initialised as all ones
     cdef np_floats[::1] max_dist_color = np.ones(n_segments, dtype=dtype)
     cdef np_floats dist_color
+    cdef np_floats image_norm_color
+    cdef np_floats center_norm_color
 
     # The reference implementation (Achanta et al.) calls this invxywt
     cdef np_floats spatial_weight = 1.0 / (step * step)
@@ -162,11 +164,19 @@ def _slic_cython(np_floats[:, :, :, ::1] image_zyx,
 
                             if not ignore_color:
                                 dist_color = 0
+                                image_norm_color = 0
+                                center_norm_color = 0
                                 for c in range(3, n_features):
-                                    t = (image_zyx[z, y, x, c - 3]
-                                         - segments[k, c])
-                                    dist_color += t * t
-
+                                    if color_distance == 'euclidean':
+                                        t = (image_zyx[z, y, x, c - 3]
+                                            - segments[k, c])
+                                        dist_color += t * t
+                                    elif color_distance == 'sad':
+                                        dist_color += image_zyx[z, y, x, c - 3] * segments[k, c]
+                                        image_norm_color += image_zyx[z, y, x, c - 3] * image_zyx[z, y, x, c - 3]
+                                        center_norm_color += segments[k, c] * segments[k, c]
+                                if color_distance == 'sad':
+                                    dist_color = acos(dist_color/(sqrt(image_norm_color) * sqrt(center_norm_color)))
                                 if slic_zero:
                                     dist_color /= max_dist_color[k]
                                 dist_center += dist_color
@@ -223,11 +233,21 @@ def _slic_cython(np_floats[:, :, :, ::1] image_zyx,
                                     continue
 
                             k = nearest_segments[z, y, x] - start_label
-                            dist_color = 0
 
+                            dist_color = 0
+                            image_norm_color = 0
+                            center_norm_color = 0
                             for c in range(3, n_features):
-                                t = image_zyx[z, y, x, c - 3] - segments[k, c]
-                                dist_color += t * t
+                                if color_distance == 'euclidean':
+                                    t = (image_zyx[z, y, x, c - 3]
+                                         - segments[k, c])
+                                    dist_color += t * t
+                                elif color_distance == 'sad':
+                                    dist_color += image_zyx[z, y, x, c - 3] * segments[k, c]
+                                    image_norm_color += image_zyx[z, y, x, c - 3] * image_zyx[z, y, x, c - 3]
+                                    center_norm_color += segments[k, c] * segments[k, c]
+                            if color_distance == 'sad':
+                                dist_color = acos(dist_color/(sqrt(image_norm_color) * sqrt(center_norm_color)))
 
                             # The reference implementation seems to only change
                             # the color if it increases from previous iteration
