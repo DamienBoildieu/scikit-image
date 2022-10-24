@@ -18,20 +18,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04]
+        os: [ubuntu-latest]
         cibw_python: [ "cp38-*", "cp39-*"]
         cibw_manylinux: [ manylinux2014 ]
         cibw_arch: [ "x86_64", "i686" ]
         include:
-          - os: ubuntu-18.04
-            cibw_python: "cp37-*"
-            cibw_manylinux: manylinux2010
-            cibw_arch: x86_64
-          - os: ubuntu-18.04
-            cibw_python: "cp37-*"
-            cibw_manylinux: manylinux2010
-            cibw_arch: i686
-          - os: ubuntu-18.04
+          - os: ubuntu-latest
             cibw_python: "cp310-*"
             cibw_manylinux: manylinux2014
             cibw_arch: x86_64
@@ -69,8 +61,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04]
-        cibw_python: [ "cp37-*", "cp38-*" , "cp39-*" , "cp310-*" ]
+        os: [ubuntu-latest]
+        cibw_python: [ "cp38-*" , "cp39-*" , "cp310-*" ]
         cibw_manylinux: [ manylinux2014 ]
     steps:
       - uses: actions/checkout@v2
@@ -112,16 +104,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest]
-        cibw_python: [ "cp37-*", "cp38-*", "cp39-*", "cp310-*" ]
+        cibw_python: ["cp38-*", "cp39-*", "cp310-*" ]
         # TODO: add "universal2" once a universal2 libomp is available
         cibw_arch: [ "x86_64", "arm64"]
-        exclude:
-          - os: macos-latest
-            cibw_python: "cp37-*"
-            cibw_arch: arm64
-        #   - os: macos-latest
-        #     cibw_python: "cp37-*"
-        #     cibw_arch: universal2
 
     steps:
       - uses: actions/checkout@v2
@@ -188,7 +173,7 @@ jobs:
       matrix:
         os: [windows-latest]
         cibw_arch: ["AMD64", "x86"]
-        cibw_python: ["cp37-*", "cp38-*", "cp39-*", "cp310-*"]
+        cibw_python: ["cp38-*", "cp39-*", "cp310-*"]
         exclude:
           - os: windows-latest
             cibw_python: "cp310-*"
