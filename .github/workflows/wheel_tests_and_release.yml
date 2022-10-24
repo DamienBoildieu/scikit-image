@@ -313,7 +313,7 @@ jobs:
           twine upload ${{ github.workspace }}/dist/*.whl
           twine upload ${{ github.workspace }}/dist/scikit-image-${SK_VERSION:1}.tar.gz
         env:
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
               
       - name: Github release
