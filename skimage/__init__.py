@@ -3,6 +3,8 @@
 ``scikit-image`` (a.k.a. ``skimage``) is a collection of algorithms for image
 processing and computer vision.
 
+scikit-cars is its fork allowing to use SAD (spectral angle distance) for channels distance in the SLIC algorithm.
+
 The main package of ``skimage`` only provides a few utilities for converting
 between image data types; for most features, you need to import one of the
 following subpackages:
