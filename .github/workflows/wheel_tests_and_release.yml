@@ -280,7 +280,7 @@ jobs:
       contents: write  # for softprops/action-gh-release to create GitHub release
     name: Release
     needs: [build_linux_37_and_above_wheels, build_linux_aarch64_wheels, build_macos_wheels, build_windows_wheels]
-    if: github.repository_owner == 'scikit-image' && startsWith(github.ref, 'refs/tags/v') && always()
+    if: github.repository_owner == 'DamienBoildieu' && startsWith(github.ref, 'refs/tags/v') && always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -311,7 +311,7 @@ jobs:
           # We prefer to release wheels before source because otherwise there is a
           # small window during which users who pip install scikit-image will require compilation.
           twine upload ${{ github.workspace }}/dist/*.whl
-          twine upload ${{ github.workspace }}/dist/scikit-image-${SK_VERSION:1}.tar.gz
+          twine upload ${{ github.workspace }}/dist/scikit-cars-${SK_VERSION:1}.tar.gz
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
