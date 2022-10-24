@@ -4,6 +4,7 @@
 #cython: wraparound=False
 from libc.float cimport DBL_MAX
 from libc.math cimport acos, sqrt
+
 import numpy as np
 cimport numpy as cnp
 
@@ -16,7 +17,7 @@ cnp.import_array()
 def _slic_cython(np_floats[:, :, :, ::1] image_zyx,
                  cnp.uint8_t[:, :, ::1] mask,
                  np_floats[:, ::1] segments,
-                 float step,
+                 cnp.float32_t step,
                  Py_ssize_t max_num_iter,
                  np_floats[::1] spacing,
                  bint slic_zero,
@@ -76,6 +77,7 @@ def _slic_cython(np_floats[:, :, :, ::1] image_zyx,
     performance and for readability.
 
     """
+
     if np_floats is cnp.float32_t:
         dtype = np.float32
     else:
