@@ -76,7 +76,7 @@ jobs:
         with:
           python-version: '3.9'
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v2
         with:
           platforms: arm64
       - name: Install cibuildwheel
