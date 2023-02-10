@@ -19,17 +19,15 @@ except ImportError:
 
 from pythran.dist import PythranBuildExt as pythran_build_ext
 
-DISTNAME = 'scikit-image'
-DESCRIPTION = 'Image processing in Python'
-MAINTAINER = 'Stefan van der Walt'
-MAINTAINER_EMAIL = 'stefan@sun.ac.za'
-URL = 'https://scikit-image.org'
+DISTNAME = 'scikit-cars'
+DESCRIPTION = 'Fork of scikit-image including SAD in SLIC algorithm'
+MAINTAINER = 'Damien Boildieu'
+MAINTAINER_EMAIL = 'damien.boildieu@unilim.fr'
 LICENSE = 'Modified BSD'
-DOWNLOAD_URL = 'https://scikit-image.org/docs/stable/install.html'
+URL = 'https://github.com/DamienBoildieu/scikit-image'
+DOWNLOAD_URL = 'https://github.com/DamienBoildieu/scikit-image'
 PROJECT_URLS = {
-    "Bug Tracker": 'https://github.com/scikit-image/scikit-image/issues',
-    "Documentation": 'https://scikit-image.org/docs/stable/',
-    "Source Code": 'https://github.com/scikit-image/scikit-image'
+    "Source Code": 'https://github.com/DamienBoildieu/scikit-image'
 }
 
 with open('README.md', encoding='utf-8') as f:
@@ -39,11 +37,7 @@ if sys.version_info < (3, 8):
 
     error = f"""Python {'.'.join([str(v) for v in sys.version_info[:3]])} detected.
 
-scikit-image supports only Python 3.8 and above.
-
-For Python 2.7, please install the 0.14.x Long Term Support release using:
-
- $ pip install 'scikit-image<0.15'
+scikit-cars supports only Python 3.8 and above.
 """
 
     sys.stderr.write(error + "\n")

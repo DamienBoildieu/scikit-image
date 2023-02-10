@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np
 from scipy.ndimage import distance_transform_edt as distance
 
@@ -19,36 +21,64 @@ def _cv_curvature(phi):
     return K
 
 
-def _cv_calculate_variation(image, phi, mu, lambda1, lambda2, dt):
-    """Returns the variation of level set 'phi' based on algorithm parameters.
+def _cv_calculate_variation(
+    img: np.array, phi: np.array, mu: float, nu: float, lambda1: float, lambda2: float, dt: float
+) -> np.array:
+    """Solve the level set values at t+1.
+
+    Parameters
+    ----------
+    img : np.array
+        The image to segment.
+    phi : np.array
+        The level set.
+    mu : float
+        Segmentation curve length penalty.
+    nu : float
+        Segmentation area length penalty.
+    lambda1 : float
+        Penalty of the inside class intravariance.
+    lambda2 : float
+        Penalty of the outside class intravariance.
+    dt : float
+        Time step used for the pde resolution.
+
+    Returns
+    -------
+    np.array
+        The level set values at t+1.
     """
     eta = 1e-16
-    P = np.pad(phi, 1, mode='edge')
+    padded = np.pad(phi, 1, mode='edge')
+    grad_x_p = padded[1:-1, 2:] - padded[1:-1, 1:-1]
+    grad_x_n = padded[1:-1, 1:-1] - padded[1:-1, :-2]
+    grad_x_0 = (padded[1:-1, 2:] - padded[1:-1, :-2]) / 2.0
 
-    phixp = P[1:-1, 2:] - P[1:-1, 1:-1]
-    phixn = P[1:-1, 1:-1] - P[1:-1, :-2]
-    phix0 = (P[1:-1, 2:] - P[1:-1, :-2]) / 2.0
+    grad_y_p = padded[2:, 1:-1] - padded[1:-1, 1:-1]
+    grad_y_n = padded[1:-1, 1:-1] - padded[:-2, 1:-1]
+    grad_y_0 = (padded[2:, 1:-1] - padded[:-2, 1:-1]) / 2.0
 
-    phiyp = P[2:, 1:-1] - P[1:-1, 1:-1]
-    phiyn = P[1:-1, 1:-1] - P[:-2, 1:-1]
-    phiy0 = (P[2:, 1:-1] - P[:-2, 1:-1]) / 2.0
+    div_1 = 1. / np.sqrt(eta + grad_x_p ** 2 + grad_y_0 ** 2)
+    div_2 = 1. / np.sqrt(eta + grad_x_n ** 2 + grad_y_0 ** 2)
+    div_3 = 1. / np.sqrt(eta + grad_x_0 ** 2 + grad_y_p ** 2)
+    div_4 = 1. / np.sqrt(eta + grad_x_0 ** 2 + grad_y_n ** 2)
 
-    C1 = 1. / np.sqrt(eta + phixp**2 + phiy0**2)
-    C2 = 1. / np.sqrt(eta + phixn**2 + phiy0**2)
-    C3 = 1. / np.sqrt(eta + phix0**2 + phiyp**2)
-    C4 = 1. / np.sqrt(eta + phix0**2 + phiyn**2)
+    mu_term = (padded[1:-1, 2:] * div_1 + padded[1:-1, :-2] * div_2 +
+               padded[2:, 1:-1] * div_3 + padded[:-2, 1:-1] * div_4)
 
-    K = (P[1:-1, 2:] * C1 + P[1:-1, :-2] * C2 +
-         P[2:, 1:-1] * C3 + P[:-2, 1:-1] * C4)
+    c1, c2 = _cv_calculate_averages(img, phi)
 
-    Hphi = 1 * (phi > 0)
-    (c1, c2) = _cv_calculate_averages(image, Hphi)
+    dist_c1 = img - c1
+    dist_c1 *= dist_c1
+    dist_c1 = lambda1 * np.sum(dist_c1, axis=len(img.shape) - 1)
+    dist_c2 = img - c2
+    dist_c2 *= dist_c2
+    dist_c2 = lambda2 * np.sum(dist_c2, axis=len(img.shape) - 1)
 
-    difference_from_average_term = (- lambda1 * (image-c1)**2 +
-                                    lambda2 * (image-c2)**2)
-    new_phi = (phi + (dt*_cv_delta(phi)) *
-               (mu*K + difference_from_average_term))
-    return new_phi / (1 + mu * dt * _cv_delta(phi) * (C1+C2+C3+C4))
+    delta_phi = dt * _cv_delta(phi)
+    new_phi = phi + delta_phi * (mu * mu_term - nu - dist_c1 + dist_c2)
+
+    return new_phi / (1 + mu * delta_phi * (div_1 + div_2 + div_3 + div_4))
 
 
 def _cv_heavyside(x, eps=1.):
@@ -58,27 +88,54 @@ def _cv_heavyside(x, eps=1.):
     return 0.5 * (1. + (2./np.pi) * np.arctan(x/eps))
 
 
-def _cv_delta(x, eps=1.):
-    """Returns the result of a regularised dirac function of the
-    input value(s).
+def _cv_delta(x: np.array, eps: float = 1.) -> np.array:
+    """Compute a regularized Dirac function of x.
+
+    Parameters
+    ----------
+    x : np.array
+        Input aray.
+    eps : float, optional
+        Input aray, by default 1.
+
+    Returns
+    -------
+    np.array
+        The application of a regularized dirac function on x.
     """
     return eps / (eps**2 + x**2)
 
 
-def _cv_calculate_averages(image, Hphi):
-    """Returns the average values 'inside' and 'outside'.
+def _cv_calculate_averages(img: np.array, phi: np.array) -> Tuple[np.array, np.array]:
+    """Compute average of the two segmentation classes.
+
+    Parameters
+    ----------
+    img : np.array
+        The image.
+    phi : np.array
+        The level set.
+    Returns
+    -------
+    Tuple[np.array, np.array]
+        The first value is the average inside the level set and the second is the one outside.
     """
-    H = Hphi
-    Hinv = 1. - H
-    Hsum = np.sum(H)
-    Hinvsum = np.sum(Hinv)
-    avg_inside = np.sum(image * H)
-    avg_oustide = np.sum(image * Hinv)
-    if Hsum != 0:
-        avg_inside /= Hsum
-    if Hinvsum != 0:
-        avg_oustide /= Hinvsum
-    return (avg_inside, avg_oustide)
+    avg_c1 = np.zeros((img.shape[-1]), dtype=img.dtype)
+    avg_c2 = np.zeros((img.shape[-1]), dtype=img.dtype)
+    idx = phi > 0
+    count_c1 = np.count_nonzero(idx)
+    count_c2 = idx.size - count_c1
+
+    for dim in range(img.shape[-1]):
+        curr = img[:, :, dim]
+        avg_c1[dim] = np.sum(curr[idx])
+        if count_c1 > 0:
+            avg_c1[dim] /= count_c1
+
+        avg_c2[dim] = np.sum(curr[np.logical_not(idx)])
+        if count_c2 > 0:
+            avg_c2[dim] /= count_c2
+    return avg_c1, avg_c2
 
 
 def _cv_difference_from_average_term(image, Hphi, lambda_pos, lambda_neg):
@@ -155,12 +212,14 @@ def _cv_small_disk(image_size):
     return (radius - distance(res)) / (radius * 3)
 
 
-def _cv_init_level_set(init_level_set, image_shape, dtype=np.float64):
+def _cv_init_level_set(init_level_set, image_shape, square_size=5, dtype=np.float64):
     """Generates an initial level set function conditional on input arguments.
+
+    'square_size' is only used if 'init_level_set' is set to 'checkerboard'
     """
     if type(init_level_set) == str:
         if init_level_set == 'checkerboard':
-            res = _cv_checkerboard(image_shape, 5, dtype)
+            res = _cv_checkerboard(image_shape, square_size, dtype)
         elif init_level_set == 'disk':
             res = _cv_large_disk(image_shape)
         elif init_level_set == 'small disk':
@@ -172,7 +231,7 @@ def _cv_init_level_set(init_level_set, image_shape, dtype=np.float64):
     return res.astype(dtype, copy=False)
 
 
-def chan_vese(image, mu=0.25, lambda1=1.0, lambda2=1.0, tol=1e-3,
+def chan_vese(image, mu=0.25, nu=0., lambda1=1.0, lambda2=1.0, tol=1e-3,
               max_num_iter=500, dt=0.5, init_level_set='checkerboard',
               extended_output=False):
     """Chan-Vese segmentation algorithm.
@@ -188,6 +247,8 @@ def chan_vese(image, mu=0.25, lambda1=1.0, lambda2=1.0, tol=1e-3,
         'edge length' weight parameter. Higher `mu` values will
         produce a 'round' edge, while values closer to zero will
         detect smaller objects.
+    nu: float, optional
+        Segmentation area length penalty, by default 0
     lambda1 : float, optional
         'difference from average' weight parameter for the output
         region with value 'True'. If it is lower than `lambda2`, this
@@ -266,10 +327,6 @@ def chan_vese(image, mu=0.25, lambda1=1.0, lambda2=1.0, tol=1e-3,
     in a publication entitled "An Active Contour Model Without Edges"
     [1]_.
 
-    This implementation of the algorithm is somewhat simplified in the
-    sense that the area factor 'nu' described in the original paper is
-    not implemented, and is only suitable for grayscale images.
-
     Typical values for `lambda1` and `lambda2` are 1. If the
     'background' is very different from the segmented object in terms
     of distribution (for example, a uniform black image with figures
@@ -285,8 +342,7 @@ def chan_vese(image, mu=0.25, lambda1=1.0, lambda2=1.0, tol=1e-3,
     squared and weighed by the 'lambda' factors to which is added the
     length of the contour multiplied by the 'mu' factor.
 
-    Supports 2D grayscale images only, and does not implement the area
-    term described in the original article.
+    Supports 2D grayscale and vector-valued images.
 
     References
     ----------
@@ -303,31 +359,32 @@ def chan_vese(image, mu=0.25, lambda1=1.0, lambda2=1.0, tol=1e-3,
         raise ValueError("Input image should be a 2D array.")
 
     float_dtype = _supported_float_type(image.dtype)
-    phi = _cv_init_level_set(init_level_set, image.shape, dtype=float_dtype)
+    phi = _cv_init_level_set(init_level_set, image.shape[:-1], dtype=float_dtype)
 
-    if type(phi) != np.ndarray or phi.shape != image.shape:
+    if type(phi) != np.ndarray or phi.shape != image.shape[:-1]:
         raise ValueError("The dimensions of initial level set do not "
                          "match the dimensions of image.")
 
     image = image.astype(float_dtype, copy=False)
-    image = image - np.min(image)
-    if np.max(image) != 0:
-        image = image / np.max(image)
+    image = image - np.min(image.reshape(image.shape[0] * image.shape[1], image.shape[2]), axis=0)
+    max_val = np.max(image.reshape(image.shape[0] * image.shape[1], image.shape[2]), axis=0)
+    max_val[max_val == 0] = 1.
+    image = image / max_val
 
     i = 0
     old_energy = _cv_energy(image, phi, mu, lambda1, lambda2)
     energies = []
-    phivar = tol + 1
+    phi_var = tol + 1
     segmentation = phi > 0
 
-    while(phivar > tol and i < max_num_iter):
+    while phi_var > tol and i < max_num_iter:
         # Save old level set values
-        oldphi = phi
+        old_phi = phi
 
         # Calculate new level set
-        phi = _cv_calculate_variation(image, phi, mu, lambda1, lambda2, dt)
+        phi = _cv_calculate_variation(image, phi, mu, nu, lambda1, lambda2, dt)
         phi = _cv_reset_level_set(phi)
-        phivar = np.sqrt(((phi-oldphi)**2).mean())
+        phi_var = np.linalg.norm(phi - old_phi)
 
         # Extract energy and compare to previous level set and
         # segmentation to see if continuing is necessary
@@ -340,6 +397,6 @@ def chan_vese(image, mu=0.25, lambda1=1.0, lambda2=1.0, tol=1e-3,
         i += 1
 
     if extended_output:
-        return (segmentation, phi, energies)
+        return segmentation, phi, energies
     else:
         return segmentation
