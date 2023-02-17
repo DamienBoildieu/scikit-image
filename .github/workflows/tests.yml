@@ -88,7 +88,7 @@ jobs:
           if [[ $INSTALL_FROM_SDIST == "1" ]]; then
               pip uninstall cython -y
               python setup.py sdist
-              pip install dist/scikit-image-*.tar.gz
+              pip install dist/scikit-cars-*.tar.gz
           else
               pip install -vv --no-build-isolation .;
           fi
