@@ -3,6 +3,7 @@
 This package is a scikit-image fork.
 See [https://github.com/scikit-image/scikit-image](https://github.com/scikit-image/scikit-image) for the original package.
 This package add the following features to scikit-image:
+
 - Use the SAD for channels distance in SLIC algorithm.
 - Implement Chan-Sandberg-Vese segmentation (Chan-Vase for vector-valued images) with nu parameter.
 
