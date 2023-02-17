@@ -355,8 +355,8 @@ def chan_vese(image, mu=0.25, nu=0., lambda1=1.0, lambda2=1.0, tol=1e-3,
     .. [3] The Chan-Vese Algorithm - Project Report, Rami Cohen, 2011
            :arXiv:`1107.2782`
     """
-    if len(image.shape) != 2:
-        raise ValueError("Input image should be a 2D array.")
+    if len(image.shape) == 2:
+        image = image[..., np.newaxis]
 
     float_dtype = _supported_float_type(image.dtype)
     phi = _cv_init_level_set(init_level_set, image.shape[:-1], dtype=float_dtype)
