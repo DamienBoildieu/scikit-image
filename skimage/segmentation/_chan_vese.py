@@ -126,15 +126,13 @@ def _cv_calculate_averages(img: np.array, phi: np.array) -> Tuple[np.array, np.a
     count_c1 = np.count_nonzero(idx)
     count_c2 = idx.size - count_c1
 
-    for dim in range(img.shape[-1]):
-        curr = img[:, :, dim]
-        avg_c1[dim] = np.sum(curr[idx])
-        if count_c1 > 0:
-            avg_c1[dim] /= count_c1
+    if count_c1 > 0:
+            avg_c1 = np.sum(img[idx], axis=0)
+            avg_c1 /= count_c1
+    if count_c2 > 0:
+        avg_c2 = np.sum(img[np.logical_not(idx)], axis=0)
+        avg_c2 /= count_c2
 
-        avg_c2[dim] = np.sum(curr[np.logical_not(idx)])
-        if count_c2 > 0:
-            avg_c2[dim] /= count_c2
     return avg_c1, avg_c2
 
 
