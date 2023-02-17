@@ -1,5 +1,5 @@
 project(
-  'scikit-image',
+  'scikit-cars',
   'c', 'cpp',
   # Note that the git commit hash cannot be added dynamically here
   # That only happens when importing from a git repository.
@@ -20,11 +20,11 @@ cpp = meson.get_compiler('cpp')
 # Check compiler is recent enough (see "Toolchain Roadmap" for details)
 if cc.get_id() == 'gcc'
   if not cc.version().version_compare('>=8.0')
-    error('scikit-image requires GCC >= 8.0')
+    error('scikit-cars requires GCC >= 8.0')
   endif
 elif cc.get_id() == 'msvc'
   if not cc.version().version_compare('>=19.20')
-    error('scikit-image requires at least vc142 (default with Visual Studio 2019) ' + \
+    error('scikit-cars requires at least vc142 (default with Visual Studio 2019) ' + \
           'when building with MSVC')
   endif
 endif
@@ -35,7 +35,7 @@ _global_c_args = cc.get_supported_arguments(
 add_project_arguments(_global_c_args, language: ['c', 'cpp'])
 
 # We need -lm for all C code (assuming it uses math functions, which is safe to
-# assume for scikit-image). For C++ it isn't needed, because libstdc++/libc++ is
+# assume for scikit-cars). For C++ it isn't needed, because libstdc++/libc++ is
 # guaranteed to depend on it. For Fortran code, Meson already adds `-lm`.
 m_dep = cc.find_library('m', required : false)
 if m_dep.found()

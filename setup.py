@@ -16,7 +16,7 @@ from setuptools.errors import CompileError, LinkError
 from pythran.dist import PythranBuildExt as pythran_build_ext
 
 DISTNAME = 'scikit-cars'
-DESCRIPTION = 'Fork of scikit-image including SAD in SLIC algorithm'
+DESCRIPTION = 'Fork of scikit-image including SAD in SLIC algorithm and Chan-Sanderg-Vese segmentation'
 MAINTAINER = 'Damien Boildieu'
 MAINTAINER_EMAIL = 'damien.boildieu@unilim.fr'
 LICENSE = 'Modified BSD'

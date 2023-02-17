@@ -239,14 +239,15 @@ def chan_vese(image, mu=0.25, nu=0., lambda1=1.0, lambda2=1.0, tol=1e-3,
 
     Parameters
     ----------
-    image : (M, N) ndarray
-        Grayscale image to be segmented.
+    image : (M, N) or (M, N, K) ndarray
+        Image to be segmented.
     mu : float, optional
         'edge length' weight parameter. Higher `mu` values will
         produce a 'round' edge, while values closer to zero will
         detect smaller objects.
     nu: float, optional
-        Segmentation area length penalty, by default 0
+        Segmentation area length penalty. A positive value favors
+        a small segmentated area while a negative one encourages a big segmented area.
     lambda1 : float, optional
         'difference from average' weight parameter for the output
         region with value 'True'. If it is lower than `lambda2`, this
