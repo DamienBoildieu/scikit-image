@@ -11,6 +11,7 @@ This package add the following features to scikit-image:
 ## Installation
 
 Use pip to install this package:
+
 ```
 pip install scikit-cars
 ```
