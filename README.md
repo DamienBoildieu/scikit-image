@@ -3,17 +3,17 @@
 This package is a scikit-image fork.
 See [https://github.com/scikit-image/scikit-image](https://github.com/scikit-image/scikit-image) for the original package.
 This package add the following features to scikit-image:
-* Use the SAD for channels distance in SLIC algorithm.
-* Implement Chan-Sandberg-Vese segmentation (Chan-Vase for vector-valued images) with nu parameter.
+- Use the SAD for channels distance in SLIC algorithm.
+- Implement Chan-Sandberg-Vese segmentation (Chan-Vase for vector-valued images) with nu parameter.
 
 **Warning** Even if the package is called scikit-cars, the python module name is still skimage.
 
 ## Installation
 
 Use pip to install this package:
-````
+```
 pip install scikit-cars
-````
+```
 
 ## Installation from source
 
@@ -41,7 +41,7 @@ Every time you modify Cython files, also run:
 $ python setup.py build_ext -i  # Build binary extensions
 ```
 
-##  Scikit-image license (Modified BSD)
+## Scikit-image license (Modified BSD)
 
 Copyright (C) 2011, the scikit-image team
 All rights reserved.
