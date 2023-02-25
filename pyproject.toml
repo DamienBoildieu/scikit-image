@@ -9,7 +9,7 @@
 ################################################################################
 
 [project]
-name = 'scikit-image'
+name = 'scikit-cars'
 description = 'Image processing in Python'
 requires-python = '>=3.8'
 readme = 'README.md'
@@ -50,8 +50,8 @@ dependencies = [
 ]
 
 [[project.maintainers]]
-name = 'scikit-image developers'
-email = 'skimage-core@discuss.scientific-python.org'
+name = 'Damien Boildieu'
+email = 'damien.boildieu@unilim.fr'
 
 [project.license]
 file = 'LICENSE.txt'
@@ -124,11 +124,11 @@ test = [
 ]
 
 [project.urls]
-homepage = 'https://scikit-image.org'
+homepage = 'https://github.com/DamienBoildieu/scikit-image'
 documentation = 'https://scikit-image.org/docs/stable'
-source = 'https://github.com/scikit-image/scikit-image'
-download = 'https://pypi.org/project/scikit-image/#files'
-tracker = 'https://github.com/scikit-image/scikit-image/issues'
+source = 'https://github.com/DamienBoildieu/scikit-image'
+download = 'https://github.com/DamienBoildieu/scikit-image'
+tracker = 'https://github.com/DamienBoildieu/scikit-image/issues'
 
 [build-system]
 build-backend = 'mesonpy'

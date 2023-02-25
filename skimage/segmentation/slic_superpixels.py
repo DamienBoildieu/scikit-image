@@ -1,4 +1,3 @@
-import math
 from collections.abc import Iterable
 from warnings import warn
 
@@ -112,7 +111,7 @@ def _get_grid_centroids(image, n_centroids):
 def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
          spacing=None, convert2lab=None,
          enforce_connectivity=True, min_size_factor=0.5, max_size_factor=3,
-         slic_zero=False, start_label=1, mask=None, *,
+         slic_zero=False, start_label=1, mask=None, color_distance='euclidean', *,
          channel_axis=-1):
     """Segments image using k-means clustering in Color-(x,y,z) space.
 
@@ -176,6 +175,9 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
 
         .. versionadded:: 0.17
            ``mask`` was introduced in 0.17
+    color_distance: str, optional
+        Distance function for color features. If euclidean, uses euclidean distance,
+        if sad, computes the spectral angle distance. Default is euclidean.
     channel_axis : int or None, optional
         If None, the image is assumed to be a grayscale (single channel) image.
         Otherwise, this parameter indicates which axis of the array corresponds
@@ -372,8 +374,11 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
         image = gaussian(image, sigma, mode='reflect')
 
     n_centroids = centroids.shape[0]
+    centroids_features = np.zeros((n_centroids, image.shape[3]))
+    if color_distance == 'sad':
+        centroids_features = image[centroids[:,0], centroids[:,1], centroids[:,2]]
     segments = np.ascontiguousarray(np.concatenate(
-        [centroids, np.zeros((n_centroids, image.shape[3]))],
+        [centroids, centroids_features],
         axis=-1), dtype=dtype)
 
     # Scaling of ratio in the same way as in the SLIC paper so the
@@ -387,17 +392,16 @@ def slic(image, n_segments=100, compactness=10., max_num_iter=10, sigma=0,
         # Step 2 of the algorithm [3]_
         _slic_cython(image, mask, segments, step, max_num_iter, spacing,
                      slic_zero, ignore_color=True,
-                     start_label=start_label)
+                     start_label=start_label, color_distance=color_distance)
 
     labels = _slic_cython(image, mask, segments, step, max_num_iter,
                           spacing, slic_zero, ignore_color=False,
-                          start_label=start_label)
-
+                          start_label=start_label, color_distance=color_distance)
     if enforce_connectivity:
         if use_mask:
             segment_size = mask.sum() / n_centroids
         else:
-            segment_size = math.prod(image.shape[:3]) / n_centroids
+            segment_size = np.prod(image.shape[:3]) / n_centroids
         min_size = int(min_size_factor * segment_size)
         max_size = int(max_size_factor * segment_size)
         labels = _enforce_label_connectivity_cython(

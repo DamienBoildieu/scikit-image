@@ -87,7 +87,7 @@ jobs:
           set -ex
           if [[ $INSTALL_FROM_SDIST == "1" ]]; then
               python -m build --no-isolation --skip-dependency-check --sdist .
-              pip install dist/scikit_image-*.tar.gz
+              pip install dist/scikit_cars-*.tar.gz
           else
               pip install -vv --no-build-isolation .;
           fi
